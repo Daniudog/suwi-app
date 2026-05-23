@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suwi — Personal Execution Assistant</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --ac:#5B4CF5;--ac2:#7C6FFF;--ac3:rgba(91,76,245,0.10);--ac4:rgba(91,76,245,0.05);
+  --bg:#F8F7F4;--sf:#EEEDF0;--sf2:#E4E3E8;--sf3:#D8D7DE;
+  --tx:#18182A;--t2:#5C5C7A;--t3:#9898B8;
+  --bd:rgba(91,76,245,0.08);--bd2:rgba(91,76,245,0.16);--bd3:rgba(91,76,245,0.24);
+  --ok:#1EC97A;--warn:#F0A020;--danger:#E05555;
+  --r:16px;--r2:10px;--r3:6px;
+  --tr:all 0.18s cubic-bezier(.4,0,.2,1);
+  --sh:0 2px 12px rgba(91,76,245,0.07);--sh2:0 6px 24px rgba(91,76,245,0.12);
+  --font:'DM Sans',system-ui,sans-serif;--mono:'DM Mono',monospace;
+}
+[data-dark]{
+  --ac:#7C6FFF;--ac2:#9D93FF;--ac3:rgba(124,111,255,0.13);--ac4:rgba(124,111,255,0.06);
+  --bg:#0D0D12;--sf:#14141C;--sf2:#1C1C26;--sf3:#242430;
+  --tx:#EAEAF8;--t2:#8080A8;--t3:#4A4A6A;
+  --bd:rgba(124,111,255,0.08);--bd2:rgba(124,111,255,0.16);--bd3:rgba(124,111,255,0.24);
+  --sh:0 2px 12px rgba(0,0,0,0.4);--sh2:0 6px 24px rgba(0,0,0,0.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--tx);transition:background .3s,color .3s;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:var(--font)}
+
+/* AUTH SCREEN */
+.auth-screen{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;align-items:center;justify-content:center}
+.auth-card{background:var(--sf);border:1px solid var(--bd2);border-radius:20px;padding:40px;max-width:420px;width:92%;box-shadow:var(--sh2)}
+.auth-logo{width:52px;height:52px;background:linear-gradient(135deg,var(--ac),var(--ac2));border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 4px 16px rgba(91,76,245,.35)}
+.auth-logo svg{width:26px;height:26px;fill:white}
+.auth-title{font-size:22px;font-weight:500;text-align:center;margin-bottom:6px;letter-spacing:-.3px}
+.auth-sub{font-size:13px;color:var(--t2);text-align:center;margin-bottom:28px}
+.auth-tabs{display:flex;gap:3px;background:var(--sf2);border-radius:var(--r2);padding:3px;margin-bottom:24px}
+.auth-tab{flex:1;padding:8px;text-align:center;border-radius:8px;font-size:13px;cursor:pointer;color:var(--t2);transition:var(--tr)}
+.auth-tab.on{background:var(--bg);color:var(--ac);font-weight:500;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--t2);margin-bottom:5px;letter-spacing:.2px}
+.inp{width:100%;background:var(--bg);border:1px solid var(--bd2);border-radius:var(--r2);padding:10px 14px;font-size:13.5px;color:var(--tx);outline:none;transition:var(--tr)}
+.inp:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac3)}
+.inp::placeholder{color:var(--t3)}
+.btn-ac{background:var(--ac);color:#fff;border:none;border-radius:var(--r2);padding:11px 18px;font-size:13.5px;font-weight:500;cursor:pointer;transition:var(--tr);display:inline-flex;align-items:center;justify-content:center;gap:7px;width:100%}
+.btn-ac:hover{background:var(--ac2);transform:translateY(-1px);box-shadow:0 4px 14px rgba(91,76,245,.3)}
+.btn-ac:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-ghost{background:var(--sf2);color:var(--t2);border:1px solid var(--bd);border-radius:var(--r2);padding:10px 14px;font-size:13px;cursor:pointer;transition:var(--tr);display:inline-flex;align-items:center;gap:6px}
+.btn-ghost:hover{background:var(--sf3)}
+.auth-error{background:rgba(224,85,85,.08);border:1px solid rgba(224,85,85,.2);border-radius:var(--r2);padding:10px 13px;font-size:13px;color:var(--danger);margin-bottom:14px;display:none}
+
+/* APP LAYOUT */
+.app{display:flex;height:100vh;overflow:hidden}
+.sb{width:220px;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;padding:22px 0 16px;flex-shrink:0;transition:background .3s}
+.main{flex:1;overflow-y:auto;background:var(--bg);transition:background .3s}
+.main::-webkit-scrollbar{width:3px}
+.main::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+.pg{padding:30px 30px 50px;display:none;animation:fi .2s ease}
+.pg.on{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* SIDEBAR */
+.logo{padding:0 20px 26px;display:flex;align-items:center;gap:10px}
+.lm{width:32px;height:32px;background:var(--ac);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(91,76,245,.3)}
+.lm svg{width:17px;height:17px;fill:white}
+.lt{font-size:18px;font-weight:500;letter-spacing:-.4px}
+.ns{padding:0 10px;margin-bottom:6px}
+.nl{font-size:10px;font-weight:500;color:var(--t3);letter-spacing:.8px;text-transform:uppercase;padding:0 10px;margin:10px 0 6px}
+.ni{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r2);cursor:pointer;font-size:13.5px;color:var(--t2);transition:var(--tr);margin-bottom:2px;user-select:none}
+.ni:hover{background:var(--sf2);color:var(--tx)}
+.ni.on{background:var(--ac3);color:var(--ac);font-weight:500}
+.ni i{font-size:17px;flex-shrink:0}
+.nbadge{margin-left:auto;background:var(--ac);color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;min-width:20px;text-align:center}
+.nbadge.green{background:var(--ok)}
+.sbb{margin-top:auto;padding:0 10px}
+.urow{display:flex;align-items:center;gap:9px;padding:9px 10px;margin-bottom:8px}
+.uav{width:28px;height:28px;background:linear-gradient(135deg,var(--ac),var(--ac2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.tth{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--r2);cursor:pointer;font-size:13px;color:var(--t2);transition:var(--tr)}
+.tth:hover{background:var(--sf2)}
+.tpill{width:34px;height:19px;background:var(--sf3);border-radius:10px;position:relative;margin-left:auto;border:1px solid var(--bd2);transition:background .2s;flex-shrink:0}
+.tpill.on{background:var(--ac)}
+.tdot{width:13px;height:13px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.tpill.on .tdot{transform:translateX(15px)}
+.logout-btn{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--r2);cursor:pointer;font-size:13px;color:var(--danger);transition:var(--tr);margin-top:4px}
+.logout-btn:hover{background:rgba(224,85,85,.08)}
+
+/* CARDS */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:20px;transition:var(--tr);box-shadow:var(--sh)}
+.card:hover{border-color:var(--bd2)}
+.mc{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:16px 20px;box-shadow:var(--sh)}
+.ml{font-size:10.5px;color:var(--t3);font-weight:500;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.mv{font-size:26px;font-weight:400;color:var(--tx);line-height:1;margin-bottom:6px;font-family:var(--mono)}
+.mch{font-size:11px;display:flex;align-items:center;gap:4px}
+.mch.up{color:var(--ok)}.mch.dn{color:var(--danger)}.mch.nt{color:var(--t3)}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.sh2r{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.st{font-size:14px;font-weight:500}
+.sa{font-size:12px;color:var(--ac);cursor:pointer}
+.sa:hover{text-decoration:underline}
+.ph{margin-bottom:26px}
+.pt{font-size:22px;font-weight:500;margin-bottom:4px;letter-spacing:-.3px}
+.ps{font-size:13px;color:var(--t2)}
+
+/* TASKS */
+.ti{display:flex;align-items:center;gap:11px;padding:11px 13px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r2);margin-bottom:8px;cursor:pointer;transition:var(--tr)}
+.ti:hover{border-color:var(--bd2);transform:translateX(2px)}
+.ti.done{opacity:.45}
+.tcheck{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--bd3);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:var(--tr)}
+.ti.done .tcheck{background:var(--ok);border-color:var(--ok)}
+.ttl{font-size:13.5px;flex:1;min-width:0}
+.ti.done .ttl{text-decoration:line-through;color:var(--t3)}
+.tag{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500;white-space:nowrap}
+.tag-f{background:var(--ac3);color:var(--ac)}
+.tag-u{background:rgba(240,160,32,.12);color:var(--warn)}
+.tag-d{background:rgba(30,201,122,.12);color:var(--ok)}
+.tag-l{background:var(--sf2);color:var(--t3)}
+.tag-delay{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:rgba(240,160,32,.12);border-radius:20px;font-size:10px;color:var(--warn);margin-left:6px}
+
+/* PROGRESS */
+.pbar{height:5px;background:var(--sf2);border-radius:3px;overflow:hidden}
+.pfill{height:100%;border-radius:3px;background:var(--ac);transition:width .5s ease}
+
+/* STREAK */
+.sdots{display:flex;gap:5px;flex-wrap:wrap;margin-top:11px}
+.sdot{width:22px;height:22px;border-radius:5px;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--t3);font-weight:500}
+.sdot.done{background:var(--ac);color:#fff}
+.sdot.today{background:var(--ac2);color:#fff;box-shadow:0 0 0 3px var(--ac3)}
+
+/* ASSISTANT */
+.abubble{background:var(--ac4);border:1px solid var(--bd);border-radius:var(--r);padding:14px 16px;margin-bottom:11px}
+.aheader{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.adot{width:7px;height:7px;background:var(--ac);border-radius:50%;animation:pulse 2s ease-in-out infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.75)}}
+.aname{font-size:11px;font-weight:600;color:var(--ac);letter-spacing:.3px;text-transform:uppercase}
+.amsg{font-size:13px;line-height:1.65}
+
+/* TIMER */
+.timer-wrap{position:relative;display:flex;align-items:center;justify-content:center;margin:0 auto}
+.timer-text{position:absolute;text-align:center}
+.timer-num{font-size:40px;font-weight:300;letter-spacing:-2px;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.timer-lbl{font-size:11px;color:var(--t3);margin-top:3px;letter-spacing:.5px;text-transform:uppercase}
+.timer-btn{width:52px;height:52px;border-radius:50%;border:none;background:var(--ac);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;transition:var(--tr);box-shadow:0 4px 16px rgba(91,76,245,.35)}
+.timer-btn:hover{background:var(--ac2);transform:scale(1.06)}
+.reset-btn{width:38px;height:38px;border-radius:50%;background:var(--sf2);color:var(--t2);border:1px solid var(--bd);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:var(--tr)}
+.mode-pill{padding:5px 14px;font-size:12px;border:1px solid var(--bd);border-radius:20px;cursor:pointer;color:var(--t2);transition:var(--tr);background:transparent}
+.mode-pill.on{background:var(--ac3);border-color:var(--ac);color:var(--ac);font-weight:500}
+
+/* CHAT */
+.chat-msgs{min-height:360px;max-height:440px;overflow-y:auto;display:flex;flex-direction:column;padding-right:3px;margin-bottom:13px}
+.chat-msgs::-webkit-scrollbar{width:3px}
+.chat-msgs::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+.umsg{display:flex;justify-content:flex-end;margin-bottom:9px}
+.ububble{background:var(--ac);color:#fff;padding:10px 14px;border-radius:14px 14px 3px 14px;font-size:13px;max-width:82%;line-height:1.55}
+.aibubble{background:var(--sf);border:1px solid var(--bd);border-radius:3px 14px 14px 14px;padding:12px 15px;font-size:13px;line-height:1.65;max-width:94%;margin-bottom:9px}
+.aibubble strong{color:var(--ac)}
+.thinking{display:flex;align-items:center;gap:8px;padding:12px 14px;background:var(--sf);border:1px solid var(--bd);border-radius:3px 14px 14px 14px;margin-bottom:9px}
+.thinking span{display:inline-block;width:6px;height:6px;background:var(--ac);border-radius:50%;animation:blink 1.2s infinite;margin:0 2px}
+.thinking span:nth-child(2){animation-delay:.2s}.thinking span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+.qbtn{text-align:left;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--r2);padding:10px 13px;cursor:pointer;font-size:13px;transition:var(--tr);width:100%;margin-bottom:7px;color:var(--tx)}
+.qbtn:hover{border-color:var(--ac);background:var(--ac4);color:var(--ac)}
+
+/* BODY DOUBLING */
+.room-card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:18px;cursor:pointer;transition:var(--tr);box-shadow:var(--sh)}
+.room-card:hover{border-color:var(--ac);transform:translateY(-3px);box-shadow:var(--sh2)}
+.room-card.joined{border-color:var(--ac);background:var(--ac4)}
+.live-dot{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;background:rgba(224,85,85,.1);border-radius:20px;font-size:10px;color:var(--danger);font-weight:600}
+.live-dot::before{content:'';width:5px;height:5px;background:var(--danger);border-radius:50%;animation:pulse 1.5s infinite}
+.rmem{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;margin-right:-6px;border:2px solid var(--sf)}
+
+/* TABS */
+.tabs{display:flex;gap:3px;background:var(--sf);border-radius:var(--r2);padding:3px;margin-bottom:18px}
+.tab{flex:1;padding:7px;text-align:center;border-radius:7px;font-size:12.5px;cursor:pointer;color:var(--t2);transition:var(--tr)}
+.tab.on{background:var(--bg);color:var(--ac);font-weight:500;box-shadow:0 1px 6px rgba(0,0,0,.08)}
+
+/* HEATMAP */
+.hmap{display:grid;grid-template-columns:repeat(26,1fr);gap:3px;margin-top:12px}
+.hcell{aspect-ratio:1;border-radius:3px;cursor:pointer;transition:var(--tr)}
+.hcell:hover{transform:scale(1.5)}
+.h0{background:var(--sf2)}.h1{background:rgba(91,76,245,.18)}.h2{background:rgba(91,76,245,.36)}.h3{background:rgba(91,76,245,.6)}.h4{background:var(--ac)}
+
+/* MISC */
+.srow{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid var(--bd)}
+.srow:last-child{border-bottom:none}
+.sdotrow{width:7px;height:7px;background:var(--ac);border-radius:50%;flex-shrink:0;margin-top:5px}
+.win-row{display:flex;align-items:flex-start;gap:11px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.win-row:last-child{border-bottom:none}
+.win-ico{width:22px;height:22px;background:rgba(30,201,122,.14);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.moodbtn{font-size:20px;padding:8px;border:1px solid var(--bd);border-radius:var(--r2);background:var(--sf);cursor:pointer;transition:var(--tr);text-align:center;flex:1}
+.moodbtn:hover{border-color:var(--ac);transform:scale(1.08)}
+.moodbtn.sel{border-color:var(--ac);background:var(--ac3)}
+.mood-row-hist{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--bd)}
+.mood-row-hist:last-child{border-bottom:none}
+.mbar-wrap{width:80px;height:5px;background:var(--sf2);border-radius:3px;overflow:hidden;flex-shrink:0}
+.mbar-fill{height:100%;border-radius:3px;background:var(--ac)}
+.alert{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:rgba(240,160,32,.07);border:1px solid rgba(240,160,32,.2);border-radius:var(--r2);margin-bottom:10px}
+.toast{position:fixed;bottom:22px;right:22px;background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:var(--r2);font-size:13px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;max-width:300px;box-shadow:var(--sh2)}
+.toast.show{opacity:1}
+.loading-overlay{position:fixed;inset:0;background:var(--bg);z-index:150;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+.loading-spinner{width:36px;height:36px;border:3px solid var(--bd2);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div style="width:40px;height:40px;background:var(--ac);border-radius:11px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(91,76,245,.35)"><svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+  <div class="loading-spinner"></div>
+  <div style="font-size:13px;color:var(--t3)">Loading Suwi...</div>
+</div>
+
+<!-- AUTH SCREEN -->
+<div class="auth-screen" id="authScreen" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+    <div class="auth-title">Suwi</div>
+    <div class="auth-sub">Your personal execution assistant</div>
+    <div class="auth-tabs">
+      <div class="auth-tab on" onclick="switchAuth('login',this)">Sign in</div>
+      <div class="auth-tab" onclick="switchAuth('signup',this)">Create account</div>
+    </div>
+    <div class="auth-error" id="authError"></div>
+    <div id="authForm">
+      <div class="field" id="nameField" style="display:none"><label>Your name</label><input class="inp" id="authName" placeholder="Alex"></div>
+      <div class="field" id="goalField" style="display:none">
+        <label>Main goal</label>
+        <select class="inp" id="authGoal">
+          <option value="Deep work and focus">Deep work & focus</option>
+          <option value="Beat procrastination">Beat procrastination</option>
+          <option value="Build daily habits">Build daily habits</option>
+          <option value="Manage projects">Manage projects</option>
+        </select>
+      </div>
+      <div class="field"><label>Email</label><input class="inp" id="authEmail" type="email" placeholder="you@example.com"></div>
+      <div class="field"><label>Password</label><input class="inp" id="authPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitAuth()"></div>
+      <button class="btn-ac" onclick="submitAuth()" id="authBtn">Sign in</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app" id="APP" style="display:none">
+<div class="sb">
+  <div class="logo">
+    <div class="lm"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+    <span class="lt">Suwi</span>
+  </div>
+  <div class="ns">
+    <div class="nl">Main</div>
+    <div class="ni on" onclick="nav('dash',this)" id="n-dash"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
+    <div class="ni" onclick="nav('tasks',this)" id="n-tasks"><i class="ti ti-checkbox"></i> Tasks <span class="nbadge" id="taskBadge">0</span></div>
+    <div class="ni" onclick="nav('focus',this)" id="n-focus"><i class="ti ti-player-play"></i> Focus</div>
+    <div class="ni" onclick="nav('analytics',this)" id="n-analytics"><i class="ti ti-chart-bar"></i> Analytics</div>
+    <div class="nl">Community</div>
+    <div class="ni" onclick="nav('rooms',this)" id="n-rooms"><i class="ti ti-users"></i> Body doubling <span class="nbadge green">4</span></div>
+    <div class="nl">You</div>
+    <div class="ni" onclick="nav('assistant',this)" id="n-assistant"><i class="ti ti-messages"></i> Assistant</div>
+    <div class="ni" onclick="nav('wins',this)" id="n-wins"><i class="ti ti-trophy"></i> Win log</div>
+    <div class="ni" onclick="nav('mood',this)" id="n-mood"><i class="ti ti-heart"></i> Mood tracker</div>
+  </div>
+  <div class="sbb">
+    <div class="urow">
+      <div class="uav" id="uav">A</div>
+      <div style="min-width:0"><div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="uname">Alex</div><div style="font-size:11px;color:var(--t3)" id="ugoal">Loading...</div></div>
+    </div>
+    <div class="tth" onclick="toggleDark()">
+      <i class="ti ti-moon" style="font-size:16px"></i>
+      <span style="font-size:13px">Dark mode</span>
+      <div class="tpill" id="DT"><div class="tdot"></div></div>
+    </div>
+    <div class="logout-btn" onclick="logout()"><i class="ti ti-logout" style="font-size:16px"></i><span style="font-size:13px">Sign out</span></div>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- DASHBOARD -->
+<div class="pg on" id="pg-dash">
+  <div class="ph"><div class="pt" id="dGreet">Good morning ✦</div><div class="ps" id="dSub">Loading...</div></div>
+  <div class="g4" style="margin-bottom:16px">
+    <div class="mc"><div class="ml">Focus today</div><div class="mv" style="color:var(--ac)" id="dFT">0m</div><div class="mch nt" id="dFTsub">No sessions yet</div></div>
+    <div class="mc"><div class="ml">Tasks done</div><div class="mv" id="dTD">0</div><div class="mch nt" id="dTDsub">Add tasks</div></div>
+    <div class="mc"><div class="ml">Streak</div><div class="mv" style="color:var(--warn)" id="dStr">0 🔥</div><div class="mch nt" id="dStrSub">Start today!</div></div>
+    <div class="mc"><div class="ml">Momentum</div><div class="mv" id="dMom">0</div><div class="mch nt" id="dMomSub">Complete tasks</div></div>
+  </div>
+  <div class="g2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="sh2r"><span class="st">Today's tasks</span><span class="sa" onclick="nav('tasks',document.getElementById('n-tasks'))">See all →</span></div>
+      <div id="dTList"><div style="font-size:13px;color:var(--t3);padding:16px 0;text-align:center">No tasks yet</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <div class="sh2r" style="margin-bottom:9px"><span class="st">Suwi says</span><div class="adot"></div></div>
+        <div class="abubble"><div class="amsg" id="dAI">Loading your briefing...</div></div>
+        <button class="btn-ac" style="font-size:13px" onclick="nav('assistant',document.getElementById('n-assistant'))">Open assistant <i class="ti ti-arrow-right"></i></button>
+      </div>
+      <div class="card">
+        <div class="sh2r"><span class="st">This week</span><span style="font-size:11px;color:var(--t3)" id="strLabel">🔥 0-day streak</span></div>
+        <div class="sdots" id="wkDots"></div>
+        <div style="margin-top:13px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:11px;color:var(--t3)">Daily goal</span><span style="font-size:11px;color:var(--ac);font-family:var(--mono)" id="gPct">0%</span></div>
+          <div class="pbar"><div class="pfill" id="gBar" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="sh2r"><span class="st">Focus time — this week</span><span style="font-size:11px;color:var(--t3);font-family:var(--mono)" id="wkTotal">Total: 0m</span></div>
+    <div style="position:relative;height:160px"><canvas id="wkChart"></canvas></div>
+  </div>
+</div>
+
+<!-- TASKS -->
+<div class="pg" id="pg-tasks">
+  <div class="ph"><div class="pt">Tasks</div><div class="ps">Manage and prioritize your work</div></div>
+  <div class="tabs" style="max-width:380px" id="tTabs">
+    <div class="tab on" onclick="fTask('all',this)">All</div>
+    <div class="tab" onclick="fTask('focus',this)">Focus</div>
+    <div class="tab" onclick="fTask('urgent',this)">Urgent</div>
+    <div class="tab" onclick="fTask('done',this)">Done</div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="sh2r"><span class="st">Today</span><span class="sa" onclick="togAdd()">+ Add task</span></div>
+    <div id="addRow" style="display:none;margin-bottom:11px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input class="inp" id="nTIn" placeholder="What do you need to do?" style="flex:1;min-width:160px" onkeydown="if(event.key==='Enter')addTask()">
+        <select id="nTTag" style="background:var(--sf);border:1px solid var(--bd2);border-radius:var(--r2);padding:0 10px;font-size:13px;color:var(--tx);outline:none;cursor:pointer">
+          <option value="focus">Focus</option><option value="urgent">Urgent</option><option value="low">Low</option>
+        </select>
+        <button class="btn-ac" style="width:auto" onclick="addTask()">Add</button>
+      </div>
+    </div>
+    <div id="tList"><div style="font-size:13px;color:var(--t3);padding:14px 0;text-align:center">Loading tasks...</div></div>
+  </div>
+  <div class="card" id="pCard" style="display:none">
+    <div class="sh2r"><span class="st">⚠️ Procrastination alerts</span></div>
+    <div id="pAlerts"></div>
+  </div>
+</div>
+
+<!-- FOCUS -->
+<div class="pg" id="pg-focus">
+  <div class="ph"><div class="pt">Focus session</div><div class="ps">Distraction-free deep work</div></div>
+  <div class="g2">
+    <div class="card" style="display:flex;flex-direction:column;align-items:center;padding:30px 20px">
+      <div class="timer-wrap" style="width:210px;height:210px">
+        <svg width="210" height="210" style="transform:rotate(-90deg)">
+          <circle cx="105" cy="105" r="92" fill="none" stroke="var(--sf2)" stroke-width="7"/>
+          <circle id="tiRing" cx="105" cy="105" r="92" fill="none" stroke="var(--ac)" stroke-width="7" stroke-linecap="round" stroke-dasharray="578" stroke-dashoffset="0" style="transition:stroke-dashoffset 1s linear"/>
+        </svg>
+        <div class="timer-text"><div class="timer-num" id="tiDsp">25:00</div><div class="timer-lbl" id="tiLbl">Ready</div></div>
+      </div>
+      <div style="display:flex;gap:11px;margin-top:22px;align-items:center">
+        <button class="timer-btn" onclick="tiAct()"><i class="ti ti-player-play" id="tiBi"></i></button>
+        <button class="reset-btn" onclick="tiRst()"><i class="ti ti-refresh"></i></button>
+      </div>
+      <div style="display:flex;gap:7px;margin-top:18px">
+        <div class="mode-pill on" onclick="setMd(this,25,'Pomodoro')">25 min</div>
+        <div class="mode-pill" onclick="setMd(this,50,'Deep work')">50 min</div>
+        <div class="mode-pill" onclick="setMd(this,5,'Break')">5 min</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <div class="st" style="margin-bottom:12px">Energy check-in</div>
+        <div style="display:flex;gap:8px">
+          <div class="moodbtn" onclick="setMood(this,'low')">😴<div style="font-size:10px;color:var(--t3);margin-top:3px">Tired</div></div>
+          <div class="moodbtn" onclick="setMood(this,'medium')">😐<div style="font-size:10px;color:var(--t3);margin-top:3px">Okay</div></div>
+          <div class="moodbtn sel" onclick="setMood(this,'good')">🙂<div style="font-size:10px;color:var(--t3);margin-top:3px">Good</div></div>
+          <div class="moodbtn" onclick="setMood(this,'high')">⚡<div style="font-size:10px;color:var(--t3);margin-top:3px">Peak</div></div>
+        </div>
+        <div style="font-size:11.5px;color:var(--t3);margin-top:8px" id="mTip">Good energy — deep work recommended</div>
+      </div>
+      <div class="card">
+        <div class="st" style="margin-bottom:12px">Today's sessions</div>
+        <div id="sLog"><div style="font-size:13px;color:var(--t3);padding:6px 0">No sessions yet</div></div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bd);display:flex;justify-content:space-between">
+          <span style="font-size:12px;color:var(--t2)">Total today</span>
+          <span style="font-size:12px;font-weight:500;color:var(--ac);font-family:var(--mono)" id="fTD">0m</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="st" style="margin-bottom:12px">Suggested task</div>
+        <div id="fTask"><div style="font-size:13px;color:var(--t3)">Add tasks to get a suggestion</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ANALYTICS -->
+<div class="pg" id="pg-analytics">
+  <div class="ph"><div class="pt">Analytics</div><div class="ps">Your productivity patterns over time</div></div>
+  <div class="tabs" style="max-width:320px">
+    <div class="tab on" onclick="swRange(this,'week')">This week</div>
+    <div class="tab" onclick="swRange(this,'month')">Month</div>
+    <div class="tab" onclick="swRange(this,'all')">All time</div>
+  </div>
+  <div class="g4" style="margin-bottom:16px">
+    <div class="mc"><div class="ml">Total focus</div><div class="mv" style="color:var(--ac)" id="aF">0m</div><div class="mch nt">Logged</div></div>
+    <div class="mc"><div class="ml">Sessions</div><div class="mv" id="aS">0</div><div class="mch nt">Completed</div></div>
+    <div class="mc"><div class="ml">Completion</div><div class="mv" id="aC">0%</div><div class="mch nt">Task rate</div></div>
+    <div class="mc"><div class="ml">Avg session</div><div class="mv" id="aA">0m</div><div class="mch nt">Per session</div></div>
+  </div>
+  <div class="g2" style="margin-bottom:16px">
+    <div class="card"><div class="sh2r"><span class="st">Daily focus time</span></div><div style="position:relative;height:190px"><canvas id="aBar"></canvas></div></div>
+    <div class="card">
+      <div class="sh2r"><span class="st">Task completion</span></div>
+      <div style="display:flex;align-items:center;gap:18px">
+        <div style="position:relative;width:150px;height:150px;flex-shrink:0"><canvas id="aDough"></canvas></div>
+        <div style="font-size:12.5px" id="dLeg"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="sh2r"><span class="st">Activity heatmap</span><div style="display:flex;gap:3px;align-items:center"><span style="font-size:10px;color:var(--t3)">Less</span><div style="width:9px;height:9px;border-radius:2px;background:var(--sf2)"></div><div style="width:9px;height:9px;border-radius:2px;background:rgba(91,76,245,.22)"></div><div style="width:9px;height:9px;border-radius:2px;background:var(--ac)"></div><span style="font-size:10px;color:var(--t3)">More</span></div></div>
+    <div class="hmap" id="HM"></div>
+  </div>
+  <div class="card"><div class="sh2r"><span class="st">Peak productivity hours</span></div><div style="position:relative;height:160px"><canvas id="aPeak"></canvas></div></div>
+</div>
+
+<!-- BODY DOUBLING -->
+<div class="pg" id="pg-rooms">
+  <div class="ph"><div class="pt">Body doubling rooms</div><div class="ps">Work silently alongside others — proven to boost focus by up to 4×</div></div>
+  <div class="abubble" style="margin-bottom:20px"><div class="aheader"><div class="adot"></div><span class="aname">Suwi</span></div><div class="amsg">Pick a room, set your intention, and work alongside others. No talking needed — presence alone creates accountability.</div></div>
+  <div class="g3" id="roomGrid" style="margin-bottom:18px"></div>
+  <div class="card" id="rActive" style="display:none">
+    <div class="sh2r"><span class="st" id="rName">Room</span><div class="live-dot">LIVE</div></div>
+    <div style="font-size:13px;color:var(--t2);margin-bottom:14px" id="rDesc"></div>
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px"><div id="rMems" style="display:flex;padding-right:6px"></div><span style="font-size:11.5px;color:var(--t3)" id="rCount"></span></div>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:8px">Your intention:</div>
+    <div style="display:flex;gap:8px">
+      <input class="inp" id="rIntent" placeholder="What will you work on?" style="flex:1">
+      <button class="btn-ac" style="width:auto" onclick="goFocus()">Focus now <i class="ti ti-player-play" style="font-size:13px"></i></button>
+      <button class="btn-ghost" onclick="leaveRoom()">Leave</button>
+    </div>
+  </div>
+</div>
+
+<!-- ASSISTANT -->
+<div class="pg" id="pg-assistant">
+  <div class="ph"><div class="pt">Suwi Assistant</div><div class="ps">Your AI execution coach · Powered by Gemini</div></div>
+  <div class="g2">
+    <div class="card" style="display:flex;flex-direction:column">
+      <div class="chat-msgs" id="chatBox">
+        <div class="aheader" style="margin-bottom:8px"><div class="adot"></div><span class="aname">Suwi</span></div>
+        <div class="aibubble" id="initMsg">Loading your personalized briefing...</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input class="inp" id="cIn" placeholder="Ask Suwi anything..." style="flex:1" onkeydown="if(event.key==='Enter'&&!event.shiftKey)send()">
+        <button class="btn-ac" onclick="send()" id="sBtn" style="width:auto;padding:10px 14px"><i class="ti ti-send" style="font-size:15px"></i></button>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <div class="st" style="margin-bottom:12px">Quick actions</div>
+        <button class="qbtn" onclick="qSend('Break down my most urgent task into micro-steps I can start in 2 minutes')">⚡ Break down urgent task</button>
+        <button class="qbtn" onclick="qSend('Plan my next 2 hours for maximum focus and output')">📅 Plan my next 2 hours</button>
+        <button class="qbtn" onclick="qSend('I am procrastinating hard. Give me your best technique to start in 60 seconds')">🧠 Stop procrastinating now</button>
+        <button class="qbtn" onclick="qSend('Give me a personalized morning briefing and exactly what to do first')">🌅 Morning briefing</button>
+        <button class="qbtn" onclick="qSend('I only have 15 minutes. What is the highest-impact action right now?')">⏱ Best use of 15 minutes</button>
+      </div>
+      <div class="card">
+        <div class="st" style="margin-bottom:11px">Live insights</div>
+        <div id="insights" style="font-size:13px;color:var(--t2);line-height:2.1">Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WIN LOG -->
+<div class="pg" id="pg-wins">
+  <div class="ph"><div class="pt">Win log</div><div class="ps">Every completed task is a win worth celebrating</div></div>
+  <div class="g4" style="margin-bottom:16px">
+    <div class="mc"><div class="ml">Total wins</div><div class="mv" style="color:var(--ok)" id="wTot">0</div><div class="mch nt">All time</div></div>
+    <div class="mc"><div class="ml">Today</div><div class="mv" id="wTdy">0</div><div class="mch nt">Completed</div></div>
+    <div class="mc"><div class="ml">Best day</div><div class="mv" id="wBst">0</div><div class="mch nt">Single day</div></div>
+    <div class="mc"><div class="ml">Streak</div><div class="mv" style="color:var(--warn)" id="wStr">0 🔥</div><div class="mch nt">Active</div></div>
+  </div>
+  <div class="card"><div class="sh2r"><span class="st">Recent wins</span><span class="sa" onclick="clrWins()">Clear all</span></div><div id="wList"><div style="font-size:13px;color:var(--t3);padding:20px 0;text-align:center">Complete tasks to log wins</div></div></div>
+</div>
+
+<!-- MOOD -->
+<div class="pg" id="pg-mood">
+  <div class="ph"><div class="pt">Mood tracker</div><div class="ps">Understand how your energy affects your productivity</div></div>
+  <div class="g4" style="margin-bottom:16px">
+    <div class="mc"><div class="ml">Today's mood</div><div class="mv" id="mTdy">—</div><div class="mch nt">Current</div></div>
+    <div class="mc"><div class="ml">Week avg</div><div class="mv" id="mAvg">—</div><div class="mch nt">Trending</div></div>
+    <div class="mc"><div class="ml">Best day</div><div class="mv" id="mBst">—</div><div class="mch nt">This week</div></div>
+    <div class="mc"><div class="ml">Entries</div><div class="mv" id="mEnt">0</div><div class="mch nt">Logged</div></div>
+  </div>
+  <div class="g2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="st" style="margin-bottom:13px">Log today's mood</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px" id="mBtns">
+        <div class="moodbtn" onclick="pickMood(this,'😴','low')" style="flex:1">😴<div style="font-size:10px;color:var(--t3);margin-top:3px">Tired</div></div>
+        <div class="moodbtn" onclick="pickMood(this,'😐','medium')" style="flex:1">😐<div style="font-size:10px;color:var(--t3);margin-top:3px">Okay</div></div>
+        <div class="moodbtn sel" onclick="pickMood(this,'🙂','good')" style="flex:1">🙂<div style="font-size:10px;color:var(--t3);margin-top:3px">Good</div></div>
+        <div class="moodbtn" onclick="pickMood(this,'⚡','high')" style="flex:1">⚡<div style="font-size:10px;color:var(--t3);margin-top:3px">Peak</div></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input class="inp" id="mNote" placeholder="How are you feeling today?" style="flex:1">
+        <button class="btn-ac" style="width:auto" onclick="saveMood()">Log</button>
+      </div>
+    </div>
+    <div class="card"><div class="sh2r"><span class="st">Mood vs focus</span></div><div style="position:relative;height:175px"><canvas id="mChart"></canvas></div></div>
+  </div>
+  <div class="card"><div class="sh2r"><span class="st">Mood history</span></div><div id="mHist"><div style="font-size:13px;color:var(--t3);padding:20px 0;text-align:center">Log moods to see patterns</div></div></div>
+</div>
+
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────
+const API = 'https://suwi-backend-production.up.railway.app/api';
+const GKEY = 'AIzaSyBtbLxFPUJLk-9_KVXcKbhIhNfHzMsGJCw';
+const GURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GKEY}`;
+
+// ── STATE ────────────────────────────────────────────
+let token = localStorage.getItem('suwi_token');
+let user = JSON.parse(localStorage.getItem('suwi_user') || 'null');
+let tasks = [];
+let sessions = [];
+let wins = [];
+let moodLog = [];
+let streak = { count: 0, last_date: null };
+let dark = localStorage.getItem('suwi_dark') === 'true';
+let chatHist = [];
+let curMood = 'good';
+let joinedRoom = null;
+let tiMins = 25;
+let authMode = 'login';
+let moodSel = '🙂'; let moodLvl = 'good';
+
+const NOW = new Date();
+const TODAY = NOW.toISOString().split('T')[0];
+const HR = NOW.getHours();
+const TM = { focus:{cls:'tag-f',lbl:'Focus'}, urgent:{cls:'tag-u',lbl:'Urgent'}, low:{cls:'tag-l',lbl:'Low'} };
+
+// ── API HELPERS ──────────────────────────────────────
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + path, opts);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+// ── AUTH ─────────────────────────────────────────────
+function switchAuth(mode, el) {
+  authMode = mode;
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('nameField').style.display = mode === 'signup' ? 'block' : 'none';
+  document.getElementById('goalField').style.display = mode === 'signup' ? 'block' : 'none';
+  document.getElementById('authBtn').textContent = mode === 'signup' ? 'Create account' : 'Sign in';
+  document.getElementById('authError').style.display = 'none';
+}
+
+async function submitAuth() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPass').value;
+  const btn = document.getElementById('authBtn');
+  const errEl = document.getElementById('authError');
+  errEl.style.display = 'none';
+  if (!email || !password) { showAuthError('Please fill in all fields'); return; }
+  btn.disabled = true;
+  btn.textContent = authMode === 'signup' ? 'Creating account...' : 'Signing in...';
+  try {
+    let data;
+    if (authMode === 'signup') {
+      const name = document.getElementById('authName').value.trim() || 'User';
+      const goal = document.getElementById('authGoal').value;
+      data = await api('POST', '/auth/signup', { name, email, password, goal });
+    } else {
+      data = await api('POST', '/auth/login', { email, password });
+    }
+    token = data.token;
+    user = data.user;
+    localStorage.setItem('suwi_token', token);
+    localStorage.setItem('suwi_user', JSON.stringify(user));
+    document.getElementById('authScreen').style.display = 'none';
+    initApp();
+  } catch (err) {
+    showAuthError(err.message);
+    btn.disabled = false;
+    btn.textContent = authMode === 'signup' ? 'Create account' : 'Sign in';
+  }
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('authError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function logout() {
+  token = null; user = null;
+  localStorage.removeItem('suwi_token');
+  localStorage.removeItem('suwi_user');
+  document.getElementById('APP').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+  tasks = []; sessions = []; wins = []; moodLog = []; chatHist = [];
+}
+
+// ── INIT ─────────────────────────────────────────────
+async function boot() {
+  if (dark) { document.getElementById('APP').setAttribute('data-dark', ''); document.getElementById('DT').classList.add('on'); }
+  document.getElementById('loadingOverlay').style.display = 'flex';
+  if (token && user) {
+    try {
+      const data = await api('GET', '/auth/me');
+      user = data.user;
+      localStorage.setItem('suwi_user', JSON.stringify(user));
+      document.getElementById('loadingOverlay').style.display = 'none';
+      initApp();
+    } catch (e) {
+      document.getElementById('loadingOverlay').style.display = 'none';
+      document.getElementById('authScreen').style.display = 'flex';
+    }
+  } else {
+    document.getElementById('loadingOverlay').style.display = 'none';
+    document.getElementById('authScreen').style.display = 'flex';
+  }
+}
+
+async function initApp() {
+  document.getElementById('APP').style.display = 'flex';
+  document.getElementById('uname').textContent = user.name;
+  document.getElementById('uav').textContent = user.name[0].toUpperCase();
+  document.getElementById('ugoal').textContent = user.goal || 'Productivity';
+  await Promise.all([loadTasks(), loadSessions(), loadWins(), loadMoods(), loadStreak()]);
+  refreshDash();
+  setTimeout(rebuildCharts, 400);
+}
+
+// ── DATA LOADERS ──────────────────────────────────────
+async function loadTasks() {
+  try { const d = await api('GET', '/tasks'); tasks = d.tasks || []; } catch (e) { tasks = []; }
+  updBadge(); renderTasks();
+}
+async function loadSessions() {
+  try { const d = await api('GET', '/sessions'); sessions = d.sessions || []; } catch (e) { sessions = []; }
+}
+async function loadWins() {
+  try { const d = await api('GET', '/wins'); wins = d.wins || []; } catch (e) { wins = []; }
+}
+async function loadMoods() {
+  try { const d = await api('GET', '/moods'); moodLog = d.moods || []; } catch (e) { moodLog = []; }
+}
+async function loadStreak() {
+  try { const d = await api('GET', '/streak'); streak = d.streak || { count: 0 }; } catch (e) { streak = { count: 0 }; }
+}
+
+// ── DARK MODE ────────────────────────────────────────
+function toggleDark() {
+  dark = !dark;
+  localStorage.setItem('suwi_dark', dark);
+  document.getElementById('APP').toggleAttribute('data-dark', dark);
+  document.getElementById('DT').classList.toggle('on', dark);
+  setTimeout(rebuildCharts, 80);
+}
+
+// ── NAV ───────────────────────────────────────────────
+const PGS = ['dash','tasks','focus','analytics','rooms','assistant','wins','mood'];
+function nav(p, el) {
+  PGS.forEach(x => { document.getElementById('pg-'+x).classList.remove('on'); const n = document.getElementById('n-'+x); if (n) n.classList.remove('on'); });
+  document.getElementById('pg-'+p).classList.add('on');
+  (el || document.getElementById('n-'+p))?.classList.add('on');
+  const actions = {
+    dash: () => { refreshDash(); setTimeout(rebuildCharts, 60); },
+    tasks: renderTasks,
+    focus: () => { renderSLog(); renderFTask(); },
+    analytics: () => { refreshAnalytics(); setTimeout(rebuildCharts, 60); },
+    rooms: renderRooms,
+    assistant: () => { refreshInsights(); if (!chatHist.length) loadBriefing(); },
+    wins: refreshWins,
+    mood: () => { renderMoodPage(); setTimeout(rebuildCharts, 60); }
+  };
+  actions[p]?.();
+}
+
+// ── TOAST ─────────────────────────────────────────────
+function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600); }
+
+// ── TASKS ─────────────────────────────────────────────
+let tFilter = 'all';
+function togAdd() { const r = document.getElementById('addRow'); r.style.display = r.style.display === 'none' ? 'block' : 'none'; if (r.style.display === 'block') document.getElementById('nTIn').focus(); }
+
+async function addTask() {
+  const inp = document.getElementById('nTIn'), tag = document.getElementById('nTTag').value, txt = inp.value.trim();
+  if (!txt) return;
+  try {
+    const d = await api('POST', '/tasks', { text: txt, tag, date: TODAY });
+    tasks.unshift(d.task);
+    inp.value = '';
+    renderTasks(); refreshDash(); updBadge(); toast('Task added ✓');
+  } catch (e) { toast('Failed to add task'); }
+}
+
+async function togTask(id) {
+  const t = tasks.find(x => x.id === id); if (!t) return;
+  const newDone = !t.done;
+  try {
+    await api('PATCH', '/tasks/' + id, { done: newDone });
+    t.done = newDone;
+    if (newDone) {
+      await api('POST', '/wins', { text: t.text, date: TODAY });
+      wins.unshift({ text: t.text, date: TODAY, created_at: new Date().toISOString() });
+      toast('✅ Win logged!');
+    }
+    renderTasks(); refreshDash(); updBadge(); chkProc();
+  } catch (e) { toast('Failed to update task'); }
+}
+
+function renderTasks(f) {
+  if (f) tFilter = f;
+  const el = document.getElementById('tList');
+  let list = tFilter === 'all' ? tasks : tFilter === 'done' ? tasks.filter(t => t.done) : tasks.filter(t => t.tag === tFilter && !t.done);
+  if (!list.length) { el.innerHTML = `<div style="font-size:13px;color:var(--t3);padding:14px 0;text-align:center">No tasks here</div>`; return; }
+  el.innerHTML = list.map(t => {
+    const tg = TM[t.tag] || TM.low;
+    const db = (t.delay_count || 0) >= 2 ? `<span class="tag-delay">⚠️ ${t.delay_count}×</span>` : '';
+    return `<div class="ti${t.done ? ' done' : ''}" onclick="togTask('${t.id}')"><div class="tcheck">${t.done ? '<i class="ti ti-check" style="font-size:10px;color:#fff"></i>' : ''}</div><div style="flex:1;min-width:0"><span class="ttl">${t.text}</span>${db}</div><span class="tag ${t.done ? 'tag-d' : tg.cls}">${t.done ? 'Done' : tg.lbl}</span></div>`;
+  }).join('');
+}
+
+function fTask(f, el) { tFilter = f; document.getElementById('tTabs').querySelectorAll('.tab').forEach(t => t.classList.remove('on')); el.classList.add('on'); renderTasks(); }
+function updBadge() { document.getElementById('taskBadge').textContent = tasks.filter(t => !t.done).length; }
+function chkProc() {
+  const del = tasks.filter(t => !t.done && (t.delay_count || 0) >= 2);
+  document.getElementById('pCard').style.display = del.length ? 'block' : 'none';
+  if (del.length) document.getElementById('pAlerts').innerHTML = del.map(t => `<div class="alert"><i class="ti ti-alert-triangle" style="color:var(--warn);font-size:17px;margin-top:1px"></i><div><div style="font-size:13px;font-weight:500;margin-bottom:3px">"${t.text}" delayed ${t.delay_count}×</div><div style="font-size:11.5px;color:var(--t3)">Try a 10-min version or ask the assistant</div></div></div>`).join('');
+}
+
+// ── DASHBOARD ─────────────────────────────────────────
+function refreshDash() {
+  const g = HR < 12 ? 'Good morning' : HR < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('dGreet').textContent = g + ', ' + (user?.name || 'there') + ' ✦';
+  document.getElementById('dSub').textContent = NOW.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) + ' · ' + tasks.filter(t => !t.done).length + ' tasks remaining';
+  const done = tasks.filter(t => t.done && t.date === TODAY).length, total = tasks.length;
+  document.getElementById('dTD').innerHTML = done + '<span style="font-size:14px;color:var(--t3)">/' + total + '</span>';
+  document.getElementById('dTDsub').textContent = tasks.filter(t => !t.done).length + ' remaining';
+  document.getElementById('dStr').textContent = streak.count + ' 🔥';
+  document.getElementById('dStrSub').textContent = streak.count > 0 ? 'Keep going!' : 'Start today!';
+  document.getElementById('strLabel').textContent = '🔥 ' + streak.count + '-day streak';
+  const tm = sessions.filter(x => x.date === TODAY).reduce((a, x) => a + x.duration, 0);
+  document.getElementById('dFT').textContent = tm >= 60 ? Math.floor(tm / 60) + 'h ' + (tm % 60) + 'm' : tm + 'm';
+  const mom = Math.min(100, Math.round(done * 15 + tm * 0.5 + streak.count * 3));
+  document.getElementById('dMom').textContent = mom;
+  document.getElementById('dMomSub').textContent = mom >= 70 ? 'Excellent!' : mom >= 40 ? 'Building up' : 'Keep going';
+  const pct = total > 0 ? Math.round(done / total * 100) : 0;
+  document.getElementById('gPct').textContent = pct + '%';
+  document.getElementById('gBar').style.width = pct + '%';
+  renderWkDots(); renderDashTasks(); renderWkChart(); loadDashAI();
+}
+function renderWkDots() {
+  const days = ['M','T','W','T','F','S','S'];
+  document.getElementById('wkDots').innerHTML = days.map((d, i) => `<div class="sdot ${i === NOW.getDay()-1 ? 'today' : i < NOW.getDay()-1 ? 'done' : ''}">${d}</div>`).join('');
+}
+function renderDashTasks() {
+  const el = document.getElementById('dTList'), r = tasks.slice(0, 5);
+  if (!r.length) { el.innerHTML = '<div style="font-size:13px;color:var(--t3);padding:16px 0;text-align:center">No tasks yet</div>'; return; }
+  el.innerHTML = r.map(t => { const tg = TM[t.tag] || TM.low; return `<div class="ti${t.done ? ' done' : ''}" onclick="togTask('${t.id}')"><div class="tcheck">${t.done ? '<i class="ti ti-check" style="font-size:10px;color:#fff"></i>' : ''}</div><span class="ttl">${t.text}</span><span class="tag ${t.done ? 'tag-d' : tg.cls}">${t.done ? 'Done' : tg.lbl}</span></div>`; }).join('');
+}
+async function loadDashAI() {
+  const done = tasks.filter(t => t.done).length, p = tasks.filter(t => !t.done).map(t => t.text).slice(0, 3).join(', ') || 'no tasks yet';
+  try {
+    const r = await fetch(GURL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: `You are Suwi. User: ${user?.name}. ${done} tasks done, pending: ${p}, streak: ${streak.count} days. Give a smart 1-2 sentence coaching tip. Direct and encouraging.` }] }], generationConfig: { maxOutputTokens: 80, temperature: 0.8 } }) });
+    const d = await r.json();
+    if (d.candidates?.[0]) document.getElementById('dAI').textContent = d.candidates[0].content.parts[0].text;
+  } catch (e) { document.getElementById('dAI').textContent = 'Stay focused and keep building momentum, ' + user?.name + '!'; }
+}
+
+// ── TIMER ─────────────────────────────────────────────
+let tiSec = 1500, tiTotal = 1500, tiRun = false, tiInt = null; tiMins = 25;
+function fmt(s) { return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); }
+function updRing() { document.getElementById('tiRing').style.strokeDashoffset = 578 * (1 - tiSec / tiTotal); document.getElementById('tiDsp').textContent = fmt(tiSec); }
+function tiAct() {
+  if (!tiRun) { tiRun = true; document.getElementById('tiBi').className = 'ti ti-player-pause'; document.getElementById('tiLbl').textContent = 'Focusing...'; tiInt = setInterval(() => { tiSec--; updRing(); if (tiSec <= 0) tiDone(); }, 1000); }
+  else { clearInterval(tiInt); tiRun = false; document.getElementById('tiBi').className = 'ti ti-player-play'; document.getElementById('tiLbl').textContent = 'Paused'; }
+}
+async function tiDone() {
+  clearInterval(tiInt); tiRun = false;
+  document.getElementById('tiLbl').textContent = 'Done! 🎉';
+  document.getElementById('tiBi').className = 'ti ti-player-play';
+  try {
+    const d = await api('POST', '/sessions', { duration: tiMins, mode: tiMins === 5 ? 'Break' : tiMins === 50 ? 'Deep work' : 'Pomodoro', date: TODAY });
+    sessions.push(d.session);
+    await loadStreak();
+  } catch (e) { sessions.push({ duration: tiMins, date: TODAY, created_at: new Date().toISOString() }); }
+  renderSLog();
+  const tm = sessions.filter(s => s.date === TODAY).reduce((a, s) => a + s.duration, 0);
+  document.getElementById('fTD').textContent = tm + 'm';
+  toast('Session complete! +' + tiMins + 'm logged 🎯');
+  tiSec = tiTotal; updRing();
+}
+function tiRst() { clearInterval(tiInt); tiRun = false; tiSec = tiTotal; document.getElementById('tiBi').className = 'ti ti-player-play'; document.getElementById('tiLbl').textContent = 'Ready'; updRing(); }
+function setMd(el, m, lbl) { document.querySelectorAll('.mode-pill').forEach(t => t.classList.remove('on')); el.classList.add('on'); tiMins = m; tiTotal = m * 60; tiSec = tiTotal; tiRst(); document.getElementById('tiLbl').textContent = lbl; }
+function setMood(el, m) { document.querySelectorAll('#pg-focus .moodbtn').forEach(b => b.classList.remove('sel')); el.classList.add('sel'); curMood = m; document.getElementById('mTip').textContent = { low: 'Low energy — try a short break first', medium: 'Steady — Pomodoro sessions work best', good: 'Good energy — go for deep work', high: 'Peak energy — tackle your hardest task now!' }[m]; }
+function renderSLog() {
+  const el = document.getElementById('sLog'), td = sessions.filter(s => s.date === TODAY).slice(-4).reverse();
+  if (!td.length) { el.innerHTML = '<div style="font-size:13px;color:var(--t3);padding:6px 0">No sessions yet</div>'; return; }
+  el.innerHTML = td.map(s => `<div class="srow"><div class="sdotrow"></div><div><div style="font-size:13px">${s.mode || 'Pomodoro'} · ${s.duration}m</div><div style="font-size:11px;color:var(--t3)">${new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div></div><span style="margin-left:auto;font-size:12px;color:var(--ok)">✓</span></div>`).join('');
+  document.getElementById('fTD').textContent = sessions.filter(s => s.date === TODAY).reduce((a, s) => a + s.duration, 0) + 'm';
+}
+function renderFTask() {
+  const el = document.getElementById('fTask'), t = tasks.filter(x => !x.done && x.tag === 'urgent')[0] || tasks.filter(x => !x.done)[0];
+  if (!t) { el.innerHTML = '<div style="font-size:13px;color:var(--t3)">All done! Great work.</div>'; return; }
+  el.innerHTML = `<div class="ti" style="margin-bottom:0;background:var(--bg)"><div class="tcheck"></div><span class="ttl">${t.text}</span><span class="tag ${TM[t.tag]?.cls || 'tag-l'}">${t.tag}</span></div>`;
+}
+
+// ── BODY DOUBLING ──────────────────────────────────────
+const ROOMS = [{id:1,name:'Deep work',e:'🧠',desc:'Silent serious focus sessions.',m:['K','J','M','S'],c:5,col:'#5B4CF5'},{id:2,name:'Creative flow',e:'🎨',desc:'Design, writing, brainstorming.',m:['R','T','L'],c:3,col:'#22C97A'},{id:3,name:'Study hall',e:'📚',desc:'Learning, courses, research.',m:['P','D','N'],c:4,col:'#F5A623'},{id:4,name:'Admin tasks',e:'📋',desc:'Emails, reports, planning.',m:['G','H'],c:2,col:'#E85D5D'},{id:5,name:'Morning sprint',e:'🌅',desc:'Early birds getting started.',m:['B','C','V'],c:3,col:'#7C6FFF'},{id:6,name:'Night owls',e:'🌙',desc:'Late-night focus sessions.',m:['X'],c:1,col:'#55557A'}];
+function renderRooms() { document.getElementById('roomGrid').innerHTML = ROOMS.map(r => `<div class="room-card${joinedRoom === r.id ? ' joined' : ''}" onclick="joinRoom(${r.id})"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="font-size:22px">${r.e}</div><div class="live-dot">LIVE</div></div><div style="font-size:14px;font-weight:500;margin-bottom:4px">${r.name}</div><div style="font-size:12px;color:var(--t2);margin-bottom:13px">${r.desc}</div><div style="display:flex;align-items:center;gap:6px"><div style="display:flex;padding-right:6px">${r.m.slice(0,3).map(m => `<div class="rmem" style="background:${r.col}">${m}</div>`).join('')}${r.c > 3 ? `<div class="rmem" style="background:var(--sf3);color:var(--t2)">+${r.c-3}</div>` : ''}</div><span style="font-size:11px;color:var(--t3)">${r.c + (joinedRoom === r.id ? 1 : 0)} working${joinedRoom === r.id ? ' · you' : ''}</span></div></div>`).join(''); }
+function joinRoom(id) { joinedRoom = id; const r = ROOMS.find(x => x.id === id); document.getElementById('rActive').style.display = 'block'; document.getElementById('rName').textContent = r.e + ' ' + r.name; document.getElementById('rDesc').textContent = r.desc; document.getElementById('rMems').innerHTML = r.m.slice(0,4).map(m => `<div class="rmem" style="background:${r.col}">${m}</div>`).join('') + `<div class="rmem" style="background:var(--ac)">${user?.name[0]}</div>`; document.getElementById('rCount').textContent = r.c + 1 + ' people working now'; renderRooms(); toast('Joined "' + r.name + '"'); document.getElementById('rActive').scrollIntoView({ behavior: 'smooth' }); }
+function leaveRoom() { joinedRoom = null; document.getElementById('rActive').style.display = 'none'; renderRooms(); toast('Left room'); }
+function goFocus() { nav('focus', document.getElementById('n-focus')); toast('Go! Session started 💪'); }
+
+// ── ANALYTICS ─────────────────────────────────────────
+function refreshAnalytics() {
+  const tot = sessions.reduce((a, s) => a + s.duration, 0);
+  document.getElementById('aF').textContent = tot >= 60 ? Math.floor(tot/60) + 'h ' + (tot%60) + 'm' : tot + 'm';
+  document.getElementById('aS').textContent = sessions.length;
+  const done = tasks.filter(t => t.done).length, total = tasks.length;
+  document.getElementById('aC').textContent = total > 0 ? Math.round(done/total*100) + '%' : '0%';
+  document.getElementById('aA').textContent = sessions.length ? Math.round(tot/sessions.length) + 'm' : '0m';
+  const pct = total > 0 ? Math.round(done/total*100) : 0;
+  document.getElementById('dLeg').innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><div style="width:9px;height:9px;border-radius:2px;background:var(--ac)"></div><span style="color:var(--t2)">Done ${pct}%</span></div><div style="display:flex;align-items:center;gap:6px"><div style="width:9px;height:9px;border-radius:2px;background:var(--sf2);border:1px solid var(--bd2)"></div><span style="color:var(--t2)">Remaining ${100-pct}%</span></div>`;
+}
+function swRange(el, r) { el.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('on')); el.classList.add('on'); if (r === 'week') refreshAnalytics(); }
+
+// ── WIN LOG ───────────────────────────────────────────
+function refreshWins() {
+  document.getElementById('wTot').textContent = wins.length;
+  document.getElementById('wTdy').textContent = wins.filter(w => w.date === TODAY).length;
+  const bd = {}; wins.forEach(w => { bd[w.date] = (bd[w.date] || 0) + 1; });
+  document.getElementById('wBst').textContent = Math.max(0, ...Object.values(bd), 0);
+  document.getElementById('wStr').textContent = streak.count + ' 🔥';
+  const el = document.getElementById('wList');
+  if (!wins.length) { el.innerHTML = '<div style="font-size:13px;color:var(--t3);padding:20px 0;text-align:center">Complete tasks to log wins</div>'; return; }
+  el.innerHTML = wins.slice(0, 20).map(w => `<div class="win-row"><div class="win-ico"><i class="ti ti-check" style="font-size:11px;color:var(--ok)"></i></div><div style="flex:1"><div style="font-size:13.5px">${w.text}</div><div style="font-size:11px;color:var(--t3)">${new Date(w.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div></div></div>`).join('');
+}
+async function clrWins() {
+  if (!confirm('Clear all wins?')) return;
+  try { await api('DELETE', '/wins'); wins = []; refreshWins(); toast('Wins cleared'); } catch (e) { toast('Failed to clear wins'); }
+}
+
+// ── MOOD ──────────────────────────────────────────────
+function pickMood(el, e, l) { document.querySelectorAll('#mBtns .moodbtn').forEach(b => b.classList.remove('sel')); el.classList.add('sel'); moodSel = e; moodLvl = l; }
+async function saveMood() {
+  const note = document.getElementById('mNote').value.trim();
+  const fm = sessions.filter(s => s.date === TODAY).reduce((a, s) => a + s.duration, 0);
+  try {
+    const d = await api('POST', '/moods', { emoji: moodSel, level: moodLvl, note, focus_minutes: fm, date: TODAY });
+    moodLog.unshift(d.mood);
+    document.getElementById('mNote').value = '';
+    toast('Mood logged: ' + moodSel);
+    renderMoodPage();
+  } catch (e) { toast('Failed to log mood'); }
+}
+function renderMoodPage() {
+  const lm = { low:1, medium:2, good:3, high:4 };
+  const td = moodLog.find(m => m.date === TODAY);
+  document.getElementById('mTdy').textContent = td ? td.emoji : '—';
+  document.getElementById('mEnt').textContent = moodLog.length;
+  const wk = moodLog.filter(m => Date.now() - new Date(m.created_at) < 7*86400000);
+  if (wk.length) {
+    const avg = wk.reduce((a, m) => a + (lm[m.level] || 2), 0) / wk.length;
+    document.getElementById('mAvg').textContent = avg >= 3.5 ? '⚡' : avg >= 2.5 ? '🙂' : avg >= 1.5 ? '😐' : '😴';
+    const best = wk.reduce((a, m) => (lm[m.level]||0) > (lm[a.level]||0) ? m : a, wk[0]);
+    document.getElementById('mBst').textContent = best.emoji;
+  }
+  const el = document.getElementById('mHist');
+  if (!moodLog.length) { el.innerHTML = '<div style="font-size:13px;color:var(--t3);padding:18px 0;text-align:center">Log moods to see patterns</div>'; return; }
+  el.innerHTML = moodLog.slice(0, 10).map(m => `<div class="mood-row-hist"><div style="font-size:20px;width:30px;text-align:center">${m.emoji}</div><div style="flex:1"><div style="font-size:13px">${m.note || 'No note'}</div><div style="font-size:11px;color:var(--t3)">${new Date(m.created_at).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' })} · ${m.focus_minutes}m focus</div></div><div class="mbar-wrap"><div class="mbar-fill" style="width:${({low:25,medium:50,good:75,high:100})[m.level]||50}%"></div></div></div>`).join('');
+}
+
+// ── ASSISTANT ─────────────────────────────────────────
+async function loadBriefing() {
+  const done = tasks.filter(t => t.done).length, p = tasks.filter(t => !t.done).map(t => t.text).slice(0,3).join(', ') || 'no tasks yet';
+  try {
+    const r = await fetch(GURL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: `You are Suwi, an intelligent execution assistant. User: ${user?.name}. Goal: ${user?.goal}. ${done} tasks done, pending: ${p}, streak: ${streak.count} days. Give a warm personalized 2-3 sentence briefing and suggest one specific **bold** action. Be direct and motivating.` }] }], generationConfig: { maxOutputTokens: 120, temperature: 0.8 } }) });
+    const d = await r.json();
+    if (d.candidates?.[0]) { const txt = d.candidates[0].content.parts[0].text; chatHist.push({ role: 'model', parts: [{ text: txt }] }); document.getElementById('initMsg').innerHTML = txt.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); }
+  } catch (e) { document.getElementById('initMsg').textContent = 'Ready to help you execute today, ' + user?.name + '.'; }
+}
+function refreshInsights() {
+  const tm = sessions.filter(x => x.date === TODAY).reduce((a, x) => a + x.duration, 0);
+  document.getElementById('insights').innerHTML = `<div>📈 Done today: <strong>${tasks.filter(t=>t.done).length}</strong></div><div>⏱ Focus: <strong>${tm}m</strong></div><div>🔥 Streak: <strong>${streak.count} days</strong></div><div>🏆 Wins: <strong>${wins.length}</strong></div><div>😊 Mood: <strong>${moodSel}</strong></div>`;
+}
+async function send() {
+  const inp = document.getElementById('cIn'), msg = inp.value.trim(); if (!msg) return;
+  inp.value = ''; addU(msg);
+  const done = tasks.filter(t => t.done).length, p = tasks.filter(t => !t.done).map(t => t.text).slice(0,3).join(', ') || 'none';
+  chatHist.push({ role: 'user', parts: [{ text: msg }] });
+  showThink(); document.getElementById('sBtn').disabled = true;
+  try {
+    const body = { contents: [{ role: 'user', parts: [{ text: `You are Suwi, an intelligent execution assistant. User: ${user?.name}. Goal: ${user?.goal}. ${done} tasks done, pending: ${p}, streak: ${streak.count} days, mood: ${curMood}. Be warm, direct, coaching. Under 4 sentences unless breakdown. Use **bold** for key actions.` }] }, ...chatHist.slice(-8)], generationConfig: { maxOutputTokens: 300, temperature: 0.8 } };
+    const r = await fetch(GURL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json(); removeThink();
+    if (d.candidates?.[0]) { const txt = d.candidates[0].content.parts[0].text; chatHist.push({ role: 'model', parts: [{ text: txt }] }); addA(txt); }
+    else addA('Sorry, trouble responding. Try again.');
+  } catch (e) { removeThink(); addA('Connection error. Please retry.'); }
+  document.getElementById('sBtn').disabled = false;
+}
+function addU(m) { const b = document.getElementById('chatBox'); const d = document.createElement('div'); d.className = 'umsg'; d.innerHTML = `<div class="ububble">${m}</div>`; b.appendChild(d); b.scrollTop = b.scrollHeight; }
+function addA(m) { const b = document.getElementById('chatBox'); const f = m.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); const d = document.createElement('div'); d.innerHTML = `<div class="aheader" style="margin-bottom:5px"><div class="adot"></div><span class="aname">Suwi</span></div><div class="aibubble">${f}</div>`; b.appendChild(d); b.scrollTop = b.scrollHeight; }
+function showThink() { const b = document.getElementById('chatBox'); const d = document.createElement('div'); d.id = 'thk'; d.innerHTML = `<div class="thinking"><span></span><span></span><span></span><span style="font-size:12px;color:var(--t3);margin-left:4px">Suwi is thinking...</span></div>`; b.appendChild(d); b.scrollTop = b.scrollHeight; }
+function removeThink() { const t = document.getElementById('thk'); if (t) t.remove(); }
+function qSend(t) { document.getElementById('cIn').value = t; send(); }
+
+// ── CHARTS ────────────────────────────────────────────
+const charts = {};
+function gc() { return dark ? { ac:'#7C6FFF',ac2:'rgba(124,111,255,0.13)',tx:'#6060A0',gr:'rgba(255,255,255,0.04)',sf:'#1C1C26',ok:'#1EC97A' } : { ac:'#5B4CF5',ac2:'rgba(91,76,245,0.09)',tx:'#9898B8',gr:'rgba(0,0,0,0.04)',sf:'#EEEDF0',ok:'#1EC97A' }; }
+function renderWkChart() {
+  const c = gc(), f = { family: 'DM Sans, system-ui', size: 11 };
+  const el = document.getElementById('wkChart'); if (!el) return;
+  if (charts.wk) { try { charts.wk.destroy(); } catch(e){} }
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const data = days.map((_, i) => { const d = new Date(); d.setDate(d.getDate() - (NOW.getDay()-1-i)); return sessions.filter(s => s.date === d.toISOString().split('T')[0]).reduce((a, s) => a + s.duration, 0); });
+  const wt = data.reduce((a, v) => a + v, 0);
+  document.getElementById('wkTotal').textContent = 'Total: ' + (wt >= 60 ? Math.floor(wt/60) + 'h ' + (wt%60) + 'm' : wt + 'm');
+  charts.wk = new Chart(el, { type:'bar', data:{ labels:days, datasets:[{ data, backgroundColor:data.map((_,i)=>i===NOW.getDay()-1?c.ac:c.ac2), borderColor:c.ac, borderWidth:1.5, borderRadius:7, borderSkipped:false }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ x:{ grid:{ display:false }, ticks:{ color:c.tx, font:f }, border:{ display:false } }, y:{ grid:{ color:c.gr }, ticks:{ color:c.tx, font:f, callback:v=>v+'m' }, border:{ display:false }, beginAtZero:true } } } });
+}
+function rebuildCharts() {
+  Object.values(charts).forEach(c => { try { c.destroy(); } catch(e){} });
+  const c = gc(), f = { family:'DM Sans, system-ui', size:11 };
+  renderWkChart();
+  const aB = document.getElementById('aBar');
+  if (aB) { const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; const data=days.map((_,i)=>{const d=new Date();d.setDate(d.getDate()-(NOW.getDay()-1-i));return sessions.filter(s=>s.date===d.toISOString().split('T')[0]).reduce((a,s)=>a+s.duration,0);}); charts.abar=new Chart(aB,{type:'bar',data:{labels:days,datasets:[{data,backgroundColor:data.map((_,i)=>i===NOW.getDay()-1?c.ac:c.ac2),borderColor:c.ac,borderWidth:1.5,borderRadius:7,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},sets:{x:{grid:{display:false},ticks:{color:c.tx,font:f},border:{display:false}},y:{grid:{color:c.gr},ticks:{color:c.tx,font:f,callback:v=>v+'m'},border:{display:false},beginAtZero:true}}}}); }
+  const dEl = document.getElementById('aDough');
+  if (dEl) { const done=tasks.filter(t=>t.done).length,rem=tasks.length-done; charts.dough=new Chart(dEl,{type:'doughnut',data:{labels:['Done','Remaining'],datasets:[{data:[done||0,rem||1],backgroundColor:[c.ac,c.sf],borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,cutout:'74%',plugins:{legend:{display:false}}}}); }
+  const pk = document.getElementById('aPeak');
+  if (pk) { const bh=new Array(13).fill(0); sessions.forEach(s=>{const h=new Date(s.created_at).getHours();bh[Math.max(0,Math.min(12,h-6))]+=s.duration;}); charts.peak=new Chart(pk,{type:'line',data:{labels:['6A','7A','8A','9A','10A','11A','12P','1P','2P','3P','4P','5P','6P'],datasets:[{data:bh,borderColor:c.ac,backgroundColor:c.ac2,borderWidth:2,fill:true,tension:.42,pointRadius:3,pointBackgroundColor:c.ac}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:c.tx,font:f},border:{display:false}},y:{grid:{color:c.gr},ticks:{color:c.tx,font:f,callback:v=>v+'m'},border:{display:false},beginAtZero:true}}}});}
+  const mc = document.getElementById('mChart');
+  if (mc) { const lm={low:1,medium:2,good:3,high:4}; const last7=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(6-i));const dk=d.toISOString().split('T')[0];const e=moodLog.find(m=>m.date===dk);return{lbl:d.toLocaleDateString('en-US',{weekday:'short'}),mood:e?lm[e.level]||2:null,focus:sessions.filter(s=>s.date===dk).reduce((a,s)=>a+s.duration,0)};}); charts.mood=new Chart(mc,{type:'line',data:{labels:last7.map(x=>x.lbl),datasets:[{label:'Mood',data:last7.map(x=>x.mood),borderColor:c.ac,backgroundColor:c.ac2,borderWidth:2,fill:true,tension:.4,pointRadius:4,pointBackgroundColor:c.ac,yAxisID:'y'},{label:'Focus(m)',data:last7.map(x=>x.focus),borderColor:c.ok,backgroundColor:'rgba(30,201,122,0.08)',borderWidth:1.5,fill:true,tension:.4,pointRadius:3,pointBackgroundColor:c.ok,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:c.tx,font:f,boxWidth:8,padding:9}}},scales:{x:{grid:{display:false},ticks:{color:c.tx,font:f},border:{display:false}},y:{grid:{color:c.gr},ticks:{color:c.tx,font:f,callback:v=>(['','😴','😐','🙂','⚡'])[v]||''},border:{display:false},min:0,max:5,position:'left'},y1:{grid:{display:false},ticks:{color:c.ok,font:f,callback:v=>v+'m'},border:{display:false},beginAtZero:true,position:'right'}}}}); }
+  const hm = document.getElementById('HM');
+  if (hm) {
+    const sessionDates = new Set(sessions.map(s => s.date));
+    const cells = Array.from({length:182}, (_,i) => { const d=new Date(); d.setDate(d.getDate()-181+i); const dk=d.toISOString().split('T')[0]; const mins=sessions.filter(s=>s.date===dk).reduce((a,s)=>a+s.duration,0); return mins>=120?4:mins>=60?3:mins>=30?2:mins>0?1:0; });
+    hm.innerHTML = cells.map(l => `<div class="hcell h${l}"></div>`).join('');
+  }
+}
+
+// ── BOOT ─────────────────────────────────────────────
+boot();
+</script>
+</body>
+</html>
