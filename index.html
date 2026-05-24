@@ -288,6 +288,10 @@ button,input,select,textarea{font-family:var(--font)}
       <span style="font-size:13px">Dark mode</span>
       <div class="tpill" id="DT"><div class="tdot"></div></div>
     </div>
+    <div onclick="logout()" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--r2);cursor:pointer;font-size:13px;color:var(--danger);transition:var(--tr);margin-top:2px" onmouseover="this.style.background='rgba(224,85,85,0.08)'" onmouseout="this.style.background='transparent'">
+      <i class="ti ti-logout" style="font-size:16px"></i>
+      <span>Sign out</span>
+    </div>
 
   </div>
 </div>
@@ -756,16 +760,22 @@ function renderTasks(f) {
   const el = document.getElementById('tList');
   let list = tFilter === 'all' ? tasks : tFilter === 'done' ? tasks.filter(t => t.done) : tasks.filter(t => t.tag === tFilter && !t.done);
   if (!list.length) { el.innerHTML = `<div style="font-size:13px;color:var(--t3);padding:14px 0;text-align:center">No tasks here</div>`; return; }
+  const isDarkMode = document.getElementById('APP').hasAttribute('data-dark');
+  const textColor = isDarkMode ? '#EAEAF8' : '#18182A';
+  const mutedColor = isDarkMode ? '#4A4A6A' : '#9898B8';
+  const bgColor = isDarkMode ? '#14141C' : '#EEEDF0';
+  const borderColor = isDarkMode ? 'rgba(124,111,255,0.08)' : 'rgba(91,76,245,0.08)';
   el.innerHTML = list.map(t => {
     const tg = TM[t.tag] || TM.low;
-    const db = (t.delay_count || 0) >= 2 ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:rgba(240,160,32,.12);border-radius:20px;font-size:10px;color:var(--warn);margin-left:6px">⚠️ ${t.delay_count}×</span>` : '';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--sf);border:1px solid var(--bd);border-radius:10px;margin-bottom:7px;cursor:pointer;transition:all 0.18s;width:100%;box-sizing:border-box" onclick="togTask('${t.id}')">
-      <div style="width:17px;height:17px;border-radius:50%;border:1.5px solid rgba(91,76,245,0.24);flex-shrink:0;display:flex;align-items:center;justify-content:center;${t.done?'background:var(--ok);border-color:var(--ok)':''}">${t.done ? '<i class="ti ti-check" style="font-size:9px;color:#fff"></i>' : ''}</div>
+    const db = (t.delay_count || 0) >= 2 ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:rgba(240,160,32,.12);border-radius:20px;font-size:10px;color:#F0A020;margin-top:3px">⚠️ ${t.delay_count}×</span>` : '';
+    const tagStyle = t.done ? 'background:rgba(30,201,122,.12);color:#1EC97A' : tg.cls==='tag-f' ? 'background:rgba(91,76,245,0.10);color:#5B4CF5' : tg.cls==='tag-u' ? 'background:rgba(240,160,32,.12);color:#F0A020' : `background:rgba(0,0,0,0.05);color:${mutedColor}`;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:${bgColor};border:1px solid ${borderColor};border-radius:10px;margin-bottom:7px;cursor:pointer;width:100%;box-sizing:border-box" onclick="togTask('${t.id}')">
+      <div style="width:17px;height:17px;border-radius:50%;border:1.5px solid ${t.done?'#1EC97A':'rgba(91,76,245,0.3)'};flex-shrink:0;display:flex;align-items:center;justify-content:center;background:${t.done?'#1EC97A':'transparent'}">${t.done ? '<i class="ti ti-check" style="font-size:9px;color:#fff"></i>' : ''}</div>
       <div style="flex:1;min-width:0;overflow:hidden">
-        <span style="font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${t.done?'text-decoration:line-through;color:var(--t3)':'color:var(--tx)'}">${t.text}</span>
+        <span style="font-size:13.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${t.done?mutedColor:textColor};${t.done?'text-decoration:line-through':''}">${t.text}</span>
         ${db}
       </div>
-      <span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap;flex-shrink:0;${t.done?'background:rgba(30,201,122,.12);color:var(--ok)':tg.cls==='tag-f'?'background:var(--ac3);color:var(--ac)':tg.cls==='tag-u'?'background:rgba(240,160,32,.12);color:var(--warn)':'background:var(--sf2);color:var(--t3)'}">${t.done ? 'Done' : tg.lbl}</span>
+      <span style="font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500;white-space:nowrap;flex-shrink:0;${tagStyle}">${t.done ? 'Done' : tg.lbl}</span>
     </div>`;
   }).join('');
 }
@@ -806,12 +816,18 @@ function renderWkDots() {
 function renderDashTasks() {
   const el = document.getElementById('dTList'), r = tasks.slice(0, 5);
   if (!r.length) { el.innerHTML = '<div style="font-size:13px;color:var(--t3);padding:16px 0;text-align:center">No tasks yet</div>'; return; }
+  const isDark2 = document.getElementById('APP').hasAttribute('data-dark');
+  const tc2 = isDark2 ? '#EAEAF8' : '#18182A';
+  const mc2 = isDark2 ? '#4A4A6A' : '#9898B8';
+  const bg2 = isDark2 ? '#14141C' : '#EEEDF0';
+  const bc2 = isDark2 ? 'rgba(124,111,255,0.08)' : 'rgba(91,76,245,0.08)';
   el.innerHTML = r.map(t => { 
-    const tg = TM[t.tag] || TM.low; 
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r2);margin-bottom:7px;cursor:pointer;transition:var(--tr)" onclick="togTask('${t.id}')">
-      <div style="width:17px;height:17px;border-radius:50%;border:1.5px solid var(--bd3);flex-shrink:0;display:flex;align-items:center;justify-content:center;${t.done?'background:var(--ok);border-color:var(--ok)':''}">${t.done ? '<i class="ti ti-check" style="font-size:9px;color:#fff"></i>' : ''}</div>
-      <span style="font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${t.done?'text-decoration:line-through;color:var(--t3)':'color:var(--tx)'}">${t.text}</span>
-      <span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap;flex-shrink:0;${t.done?'background:rgba(30,201,122,.12);color:var(--ok)':tg.cls==='tag-f'?'background:var(--ac3);color:var(--ac)':tg.cls==='tag-u'?'background:rgba(240,160,32,.12);color:var(--warn)':'background:var(--sf2);color:var(--t3)'}">${t.done ? 'Done' : tg.lbl}</span>
+    const tg = TM[t.tag] || TM.low;
+    const ts2 = t.done ? 'background:rgba(30,201,122,.12);color:#1EC97A' : tg.cls==='tag-f' ? 'background:rgba(91,76,245,0.10);color:#5B4CF5' : tg.cls==='tag-u' ? 'background:rgba(240,160,32,.12);color:#F0A020' : `background:rgba(0,0,0,0.05);color:${mc2}`;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bg2};border:1px solid ${bc2};border-radius:10px;margin-bottom:7px;cursor:pointer;width:100%;box-sizing:border-box" onclick="togTask('${t.id}')">
+      <div style="width:16px;height:16px;border-radius:50%;border:1.5px solid ${t.done?'#1EC97A':'rgba(91,76,245,0.3)'};flex-shrink:0;display:flex;align-items:center;justify-content:center;background:${t.done?'#1EC97A':'transparent'}">${t.done ? '<i class="ti ti-check" style="font-size:9px;color:#fff"></i>' : ''}</div>
+      <span style="font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${t.done?mc2:tc2};${t.done?'text-decoration:line-through':''}">${t.text}</span>
+      <span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap;flex-shrink:0;${ts2}">${t.done ? 'Done' : tg.lbl}</span>
     </div>`;
   }).join('');
 }
